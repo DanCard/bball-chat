@@ -104,4 +104,4 @@ The background polling timer is managed via systemd user units:
 
 ## License
 
-MIT License. See [LICENSE](LICENSE) for details.
+This is free and unencumbered software released into the public domain under [The Unlicense](LICENSE). See [unlicense.org](https://unlicense.org) for details.
