@@ -1,0 +1,79 @@
+#!/usr/bin/env node
+
+import { getConfig, saveStatus } from '../lib/config.js';
+import { getActiveGameCall } from '../lib/chat.js';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const RENDER_SCRIPT = path.join(__dirname, '..', 'lib', 'render_image.py');
+
+async function pollOnce() {
+  const config = getConfig();
+  const spaces = config.spaces || [];
+
+  const status = {
+    updated_at: new Date().toISOString(),
+    spaces: {}
+  };
+
+  for (const s of spaces) {
+    try {
+      const call = await getActiveGameCall(s.id);
+      status.spaces[s.key] = {
+        id: s.id,
+        name: s.name,
+        short_name: s.short_name,
+        url: s.url,
+        active_call: call
+      };
+    } catch (err) {
+      console.error(`[bball-poller] Error polling ${s.name} (${s.id}):`, err.message);
+      status.spaces[s.key] = {
+        id: s.id,
+        name: s.name,
+        short_name: s.short_name,
+        url: s.url,
+        error: err.message,
+        active_call: null
+      };
+    }
+  }
+
+  saveStatus(status);
+  try {
+    execFileSync(RENDER_SCRIPT, [], { stdio: 'ignore' });
+  } catch (renderErr) {
+    console.error('[bball-poller] Warning: image render failed:', renderErr.message);
+  }
+  console.log(`[${new Date().toLocaleTimeString()}] Status updated successfully.`);
+  return status;
+}
+
+async function main() {
+  const isOnce = process.argv.includes('--once');
+
+  if (isOnce) {
+    await pollOnce();
+    process.exit(0);
+  }
+
+  // Loop mode (daemon)
+  console.log('[bball-poller] Starting background poll loop...');
+  while (true) {
+    try {
+      await pollOnce();
+    } catch (err) {
+      console.error('[bball-poller] Loop iteration error:', err);
+    }
+    const config = getConfig();
+    const intervalSec = Math.max(30, config.poll_interval || 90);
+    await new Promise(r => setTimeout(r, intervalSec * 1000));
+  }
+}
+
+main().catch(err => {
+  console.error('[bball-poller] Fatal:', err);
+  process.exit(1);
+});

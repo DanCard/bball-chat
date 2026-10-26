@@ -1,0 +1,15 @@
+[Unit]
+Description=Google Chat Pickup Basketball Poller Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/dcar/projects/bball-chat/bin/bball-poller --once
+WorkingDirectory=/home/dcar/projects/bball-chat
+StandardOutput=journal
+StandardError=journal
+Restart=no
+
+[Install]
+WantedBy=default.target

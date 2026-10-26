@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+
+# Runtime state and temporary files
+*.tmp
+*.tmp.*
+*.log
+.DS_Store
+
+# Local overrides
+.env
+.env.local

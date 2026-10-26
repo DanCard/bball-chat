@@ -1,0 +1,159 @@
+#!/usr/bin/env node
+
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { getConfig, saveConfig, getStatus } from '../lib/config.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const POLLER_BIN = path.join(__dirname, 'bball-poller');
+const RENDER_SCRIPT = path.join(__dirname, '..', 'lib', 'render_image.py');
+
+function updateRender() {
+  try {
+    execFileSync(RENDER_SCRIPT, [], { stdio: 'ignore' });
+  } catch {}
+}
+
+const USAGE = `
+Usage: bball <command>
+
+Commands:
+  status        Show current game calls and RSVP counts (default)
+  all           Set display to show both sites: MTV and Moffett Place
+  moffett       Set display to show only Moffett Place
+  mtv           Set display to show only Lunch bball MTV
+  today         Set display to automatically show only today's game(s)
+  toggle        Cycle view mode: all -> moffett -> mtv -> today -> all
+  poll          Trigger an immediate background poll of Google Chat
+  open [site]   Open the Google Chat space in browser (mtv or moffett)
+  help          Show this help message
+`;
+
+function showStatus() {
+  const config = getConfig();
+  const status = getStatus();
+
+  console.log('========================================');
+  console.log(`Pickup Basketball Status [Mode: ${config.mode.toUpperCase()}]`);
+  console.log('========================================\n');
+
+  if (!status || !status.spaces) {
+    console.log('No status cache found. Run `bball poll` to fetch data.');
+    return;
+  }
+
+  const mtv = status.spaces.mtv?.active_call;
+  const mp = status.spaces.moffett?.active_call;
+
+  console.log('1. Lunch bball MTV:');
+  if (mtv) {
+    console.log(`   RSVP Count : ${mtv.basketball_count} 🏀 ${mtv.question_count > 0 ? `(${mtv.question_count} ❓)` : ''}`);
+    console.log(`   Timing/Call: ${mtv.text}`);
+    console.log(`   Organizer  : ${mtv.sender}`);
+    console.log(`   Is Today   : ${mtv.is_today ? 'YES' : 'No'}`);
+  } else {
+    console.log('   No active game call.');
+  }
+
+  console.log('\n2. Moffett Place Basketball:');
+  if (mp) {
+    console.log(`   RSVP Count : ${mp.basketball_count} 🏀 ${mp.question_count > 0 ? `(${mp.question_count} ❓)` : ''}`);
+    console.log(`   Timing/Call: ${mp.text}`);
+    console.log(`   Organizer  : ${mp.sender}`);
+    console.log(`   Is Today   : ${mp.is_today ? 'YES' : 'No'}`);
+  } else {
+    console.log('   No active game call.');
+  }
+
+  console.log(`\nLast Updated: ${status.updated_at ? new Date(status.updated_at).toLocaleString() : 'Never'}`);
+  console.log(`Current Panel Text: MTV 1st, Moffett 2nd -> "🏀 ${mtv?.basketball_count ?? '-'} ${mp?.basketball_count ?? '-'}"`);
+}
+
+function setMode(newMode) {
+  const validModes = ['all', 'moffett', 'mtv', 'today_only'];
+  if (!validModes.includes(newMode)) {
+    console.error(`Invalid mode: ${newMode}. Valid options: ${validModes.join(', ')}`);
+    process.exit(1);
+  }
+  const updated = saveConfig({ mode: newMode });
+  updateRender();
+  console.log(`Display mode switched to: ${newMode}`);
+}
+
+function cycleMode() {
+  const config = getConfig();
+  const modes = ['all', 'moffett', 'mtv', 'today_only'];
+  const currentIndex = modes.indexOf(config.mode);
+  const nextMode = modes[(currentIndex + 1) % modes.length];
+  saveConfig({ mode: nextMode });
+  updateRender();
+  console.log(`Cycled mode to: ${nextMode}`);
+}
+
+function triggerPoll() {
+  console.log('Polling Google Chat spaces...');
+  try {
+    execFileSync(process.execPath, [POLLER_BIN, '--once'], { stdio: 'inherit' });
+  } catch (err) {
+    console.error('Polling failed:', err.message);
+  }
+}
+
+function openChat(site) {
+  const config = getConfig();
+  const spaces = config.spaces || [];
+  let target = spaces[0];
+  if (site) {
+    const s = site.toLowerCase();
+    target = spaces.find(sp => sp.key === s || sp.name.toLowerCase().includes(s)) || spaces[0];
+  }
+  if (target && target.url) {
+    console.log(`Opening ${target.name} (${target.url})...`);
+    execFileSync('xdg-open', [target.url], { stdio: 'ignore' });
+  }
+}
+
+const args = process.argv.slice(2);
+const cmd = (args[0] || 'status').toLowerCase();
+
+switch (cmd) {
+  case 'status':
+    showStatus();
+    break;
+  case 'all':
+    setMode('all');
+    break;
+  case 'moffett':
+  case 'mp':
+    setMode('moffett');
+    break;
+  case 'mtv':
+    setMode('mtv');
+    break;
+  case 'today':
+  case 'today_only':
+    setMode('today_only');
+    break;
+  case 'toggle':
+  case 'cycle':
+  case 'next':
+    cycleMode();
+    break;
+  case 'poll':
+  case 'fetch':
+  case 'refresh':
+    triggerPoll();
+    break;
+  case 'open':
+    openChat(args[1]);
+    break;
+  case 'help':
+  case '--help':
+  case '-h':
+    console.log(USAGE.trim());
+    break;
+  default:
+    console.error(`Unknown command: ${cmd}\n${USAGE}`);
+    process.exit(1);
+}

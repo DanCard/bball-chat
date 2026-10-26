@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodic poll for Google Chat pickup basketball counts
+After=network-online.target
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=90s
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target

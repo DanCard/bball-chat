@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+
+import { getConfig, getStatus } from '../lib/config.js';
+import { formatGenmonXml } from '../lib/format.js';
+
+try {
+  const config = getConfig();
+  const status = getStatus();
+  const targetSite = (process.argv[2] || '').toLowerCase();
+  const xml = formatGenmonXml(status, config, targetSite);
+  console.log(xml);
+} catch (err) {
+  console.log("<txt><span foreground='#FF5555'>🏀 ERR</span></txt>");
+  console.log(`<tool>bball-genmon error: ${err.message}</tool>`);
+}
