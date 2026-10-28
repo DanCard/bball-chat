@@ -19,9 +19,11 @@ FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 COLOR_MTV = "#00D2FF"      # Vibrant bright cyan/blue
 COLOR_MOFFETT = "#FFA500"  # Warm amber/orange
 
-def draw_single_num(num_str, color, panel_w=32, panel_h=28, font_size=20):
+def draw_single_num(num_str, color, panel_w=32, panel_h=34, font_size=None):
     img = Image.new("RGBA", (panel_w, panel_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
+    if font_size is None:
+        font_size = 26 if len(num_str) <= 1 else 19
     font = ImageFont.truetype(FONT_PATH, font_size)
     bbox = font.getbbox(num_str)
     w = bbox[2] - bbox[0]
@@ -31,18 +33,36 @@ def draw_single_num(num_str, color, panel_w=32, panel_h=28, font_size=20):
     draw.text((x, y), num_str, font=font, fill=color)
     return img
 
-def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=44, font_size=15):
+def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=54, font_size=None):
     img = Image.new("RGBA", (panel_w, panel_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
-    font = ImageFont.truetype(FONT_PATH, font_size)
-    # Top number
-    b1 = font.getbbox(top_str)
+    cell_h = panel_h // 2
+
+    def resolve_size(s):
+        if font_size is not None:
+            return font_size
+        return 26 if len(s) <= 1 else 19
+
+    top_size = resolve_size(top_str)
+    bot_size = resolve_size(bot_str)
+
+    # Top number centered in top half
+    font_top = ImageFont.truetype(FONT_PATH, top_size)
+    b1 = font_top.getbbox(top_str)
     w1 = b1[2] - b1[0]
-    draw.text(((panel_w - w1) // 2 - b1[0], 2 - b1[1]), top_str, font=font, fill=top_color)
-    # Bottom number
-    b2 = font.getbbox(bot_str)
+    h1 = b1[3] - b1[1]
+    x1 = (panel_w - w1) // 2 - b1[0]
+    y1 = (cell_h - h1) // 2 - b1[1]
+    draw.text((x1, y1), top_str, font=font_top, fill=top_color)
+
+    # Bottom number centered in bottom half
+    font_bot = ImageFont.truetype(FONT_PATH, bot_size)
+    b2 = font_bot.getbbox(bot_str)
     w2 = b2[2] - b2[0]
-    draw.text(((panel_w - w2) // 2 - b2[0], 22 - b2[1]), bot_str, font=font, fill=bot_color)
+    h2 = b2[3] - b2[1]
+    x2 = (panel_w - w2) // 2 - b2[0]
+    y2 = cell_h + (cell_h - h2) // 2 - b2[1]
+    draw.text((x2, y2), bot_str, font=font_bot, fill=bot_color)
     return img
 
 def save_atomic(img, out_path):
