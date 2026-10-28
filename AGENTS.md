@@ -72,9 +72,7 @@ systemctl --user restart bball-poller.timer   # Restart the poller timer
 ### Forcing Immediate Genmon Refresh
 Genmon polls periodically (e.g., every 180s). To force an immediate refresh after updating images or scripts without restarting the panel:
 ```bash
-DISPLAY=:0.0 xfconf-query -c xfce4-panel -p /plugins/plugin-19/update-period -s 1000 && \
-sleep 2 && \
-DISPLAY=:0.0 xfconf-query -c xfce4-panel -p /plugins/plugin-19/update-period -s 180000
+gdbus call --session --dest org.xfce.Panel --object-path /org/xfce/Panel --method org.xfce.Panel.PluginEvent "genmon-19" "refresh" "<true>"
 ```
 
 ### Visual Verification via Screenshots

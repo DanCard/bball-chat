@@ -2,6 +2,8 @@
 import sys
 import os
 import json
+import subprocess
+import re
 from PIL import Image, ImageDraw, ImageFont
 
 CACHE_DIR = os.path.expanduser("~/.cache/bball-chat")
@@ -70,6 +72,37 @@ def save_atomic(img, out_path):
     img.save(tmp, "PNG")
     os.replace(tmp, out_path)
 
+def refresh_panel():
+    """Trigger an immediate refresh of the genmon panel plugin via DBus."""
+    plugin_id = "19"
+    try:
+        out = subprocess.check_output(
+            ["xfconf-query", "-c", "xfce4-panel", "-p", "/plugins", "-lv"],
+            text=True, stderr=subprocess.DEVNULL, timeout=1
+        )
+        for line in out.splitlines():
+            m = re.search(r"/plugins/plugin-(\d+)/command\s+.*bball-genmon", line)
+            if m:
+                plugin_id = m.group(1)
+                break
+    except Exception:
+        pass
+
+    try:
+        subprocess.run(
+            [
+                "gdbus", "call", "--session", "--dest", "org.xfce.Panel",
+                "--object-path", "/org/xfce/Panel",
+                "--method", "org.xfce.Panel.PluginEvent",
+                f"genmon-{plugin_id}", "refresh", "<true>"
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=1
+        )
+    except Exception:
+        pass
+
 def render():
     os.makedirs(CACHE_DIR, exist_ok=True)
     
@@ -126,6 +159,9 @@ def render():
     else:  # "all"
         img_stacked = draw_stacked(mtv_count, COLOR_MTV, moffett_count, COLOR_MOFFETT)
         save_atomic(img_stacked, OUTPUT_MAIN)
+
+    if "--no-refresh" not in sys.argv:
+        refresh_panel()
 
 if __name__ == "__main__":
     render()
