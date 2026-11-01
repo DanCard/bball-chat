@@ -22,7 +22,7 @@ The architecture follows a decoupled **producer-consumer** design:
    * **Rule**: Never make network requests or blocking operations inside the presenter script.
 
 4. **CLI Controller**:
-   * [`bin/bball`](bin/bball) provides user commands to check status, cycle view modes (`all` -> `moffett` -> `mtv` -> `today` -> `all`), and trigger immediate polls.
+   * [`bin/bball`](bin/bball) provides user commands to check status, cycle view modes (`all` -> `moffett` -> `mtv` -> `all`), and trigger immediate polls.
 
 ---
 
@@ -32,7 +32,6 @@ The architecture follows a decoupled **producer-consumer** design:
 ```bash
 bin/bball status              # View current active game calls and RSVP counts
 bin/bball toggle              # Cycle view mode
-bin/bball today               # Switch to smart 'today only' filter
 bin/bball all                 # Switch to combined view (MTV top, Moffett bottom)
 bin/bball mtv                 # Switch to MTV-only view
 bin/bball moffett             # Switch to Moffett-only view

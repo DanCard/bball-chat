@@ -23,8 +23,7 @@ Commands:
   all           Set display to show both sites: MTV and Moffett Place
   moffett       Set display to show only Moffett Place
   mtv           Set display to show only Lunch bball MTV
-  today         Set display to automatically show only today's game(s)
-  toggle        Cycle view mode: all -> moffett -> mtv -> today -> all
+  toggle        Cycle view mode: all -> moffett -> mtv -> all
   poll          Trigger an immediate background poll of Google Chat
   open [site]   Open the Google Chat space in browser (mtv or moffett)
   help          Show this help message
@@ -71,7 +70,7 @@ function showStatus() {
 }
 
 function setMode(newMode) {
-  const validModes = ['all', 'moffett', 'mtv', 'today_only'];
+  const validModes = ['all', 'moffett', 'mtv'];
   if (!validModes.includes(newMode)) {
     console.error(`Invalid mode: ${newMode}. Valid options: ${validModes.join(', ')}`);
     process.exit(1);
@@ -83,7 +82,7 @@ function setMode(newMode) {
 
 function cycleMode() {
   const config = getConfig();
-  const modes = ['all', 'moffett', 'mtv', 'today_only'];
+  const modes = ['all', 'moffett', 'mtv'];
   const currentIndex = modes.indexOf(config.mode);
   const nextMode = modes[(currentIndex + 1) % modes.length];
   saveConfig({ mode: nextMode });
@@ -130,10 +129,6 @@ switch (cmd) {
     break;
   case 'mtv':
     setMode('mtv');
-    break;
-  case 'today':
-  case 'today_only':
-    setMode('today_only');
     break;
   case 'toggle':
   case 'cycle':

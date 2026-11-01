@@ -345,18 +345,6 @@ def render():
             save_atomic(img_ball, OUTPUT_MAIN)
         else:
             save_atomic(img_mtv, OUTPUT_MAIN)
-    elif mode == "today_only":
-        mtv_today = mtv_call.get("is_today", False) and not mtv_past
-        moffett_today = moffett_call.get("is_today", False) and not moffett_past
-        if moffett_today and not mtv_today:
-            save_atomic(img_moffett, OUTPUT_MAIN)
-        elif mtv_today and not moffett_today:
-            save_atomic(img_mtv, OUTPUT_MAIN)
-        elif mtv_today and moffett_today:
-            img_stacked = draw_stacked(mtv_count, COLOR_MTV, moffett_count, COLOR_MOFFETT)
-            save_atomic(img_stacked, OUTPUT_MAIN)
-        else:
-            save_atomic(img_ball, OUTPUT_MAIN)
     else:  # "all"
         if mtv_past and moffett_past:
             save_atomic(img_ball, OUTPUT_MAIN)

@@ -16,8 +16,7 @@ Designed specifically for both vertical and horizontal XFCE panels using `xfce4-
 * **Glanceable Display Modes**:
   * Default (`all`): `🏀 9 8` *(MTV first, Moffett second)*
   * Single site: `bball-genmon mtv` or `bball-genmon moffett` (e.g. for dedicated vertical panel slots)
-  * Smart `today_only`: automatically filters to only display games happening today!
-* **Click-to-Cycle**: Clicking the panel item can cycle view modes (`All` $\rightarrow$ `Moffett` $\rightarrow$ `MTV` $\rightarrow$ `Today Only` $\rightarrow$ `All`).
+* **Click-to-Cycle**: Clicking the panel item can cycle view modes (`All` $\rightarrow$ `Moffett` $\rightarrow$ `MTV` $\rightarrow$ `All`).
 * **Rich Hover Tooltip**: Displays organizers, game call snippets, locations, scheduled dates, and individual RSVP counts (`🏀` and `❓`).
 * **Ultra-Fast & Non-Blocking**: The panel presenter script (`bin/bball-genmon`) reads from a local cache in `< 3ms` so your desktop panel never stutters or hangs.
 * **Autonomous Poller**: Background worker runs every 90s via systemd user timer, automatically refreshing OAuth credentials when needed.
@@ -61,7 +60,6 @@ bball status
 bball moffett     # Show only Moffett Place
 bball mtv         # Show only Lunch bball MTV
 bball all         # Show both
-bball today       # Automatically show only today's game(s)
 bball toggle      # Cycle to the next view mode
 
 # Immediate update & shortcuts
@@ -85,7 +83,7 @@ Configuration is stored at `~/.config/bball-chat/config.json`:
 }
 ```
 
-* `mode`: `"all"`, `"moffett"`, `"mtv"`, or `"today_only"`.
+* `mode`: `"all"`, `"moffett"`, or `"mtv"`.
 * `separator`: `"space"` (`9 8`) or `"slash"` (`9/8`).
 * `show_site_prefix`: `false` (`8`) or `true` (`MP: 8`).
 

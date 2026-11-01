@@ -78,7 +78,7 @@ The active view mode can be switched easily via three methods:
      "poll_interval_seconds": 90
    }
    ```
-   * Supported modes: `"all"`, `"moffett"`, `"mtv"`, `"today_only"`.
+   * Supported modes: `"all"`, `"moffett"`, `"mtv"`.
 
 ---
 
