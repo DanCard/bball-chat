@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+import dns from 'node:dns';
+dns.setDefaultResultOrder('ipv4first');
+
 import { getConfig, saveStatus } from '../lib/config.js';
 import { getActiveGameCall } from '../lib/chat.js';
 import { execFileSync } from 'node:child_process';

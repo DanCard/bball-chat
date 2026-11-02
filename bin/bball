@@ -47,7 +47,8 @@ function showStatus() {
 
   console.log('1. Lunch bball MTV:');
   if (mtv) {
-    console.log(`   RSVP Count : ${mtv.basketball_count} 🏀 ${mtv.question_count > 0 ? `(${mtv.question_count} ❓)` : ''}`);
+    const plusNote = mtv.plus_count > 0 ? ` (+${mtv.plus_count})` : '';
+    console.log(`   RSVP Count : ${mtv.basketball_count} 🏀${plusNote} ${mtv.question_count > 0 ? `(${mtv.question_count} ❓)` : ''}`);
     console.log(`   Timing/Call: ${mtv.text}`);
     console.log(`   Organizer  : ${mtv.sender}`);
     console.log(`   Is Today   : ${mtv.is_today ? 'YES' : 'No'}`);
@@ -57,7 +58,8 @@ function showStatus() {
 
   console.log('\n2. Moffett Place Basketball:');
   if (mp) {
-    console.log(`   RSVP Count : ${mp.basketball_count} 🏀 ${mp.question_count > 0 ? `(${mp.question_count} ❓)` : ''}`);
+    const plusNote = mp.plus_count > 0 ? ` (+${mp.plus_count})` : '';
+    console.log(`   RSVP Count : ${mp.basketball_count} 🏀${plusNote} ${mp.question_count > 0 ? `(${mp.question_count} ❓)` : ''}`);
     console.log(`   Timing/Call: ${mp.text}`);
     console.log(`   Organizer  : ${mp.sender}`);
     console.log(`   Is Today   : ${mp.is_today ? 'YES' : 'No'}`);
