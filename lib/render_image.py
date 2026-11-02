@@ -16,18 +16,42 @@ OUTPUT_MAIN = os.path.join(CACHE_DIR, "widget.png")
 OUTPUT_MTV = os.path.join(CACHE_DIR, "widget_mtv.png")
 OUTPUT_MOFFETT = os.path.join(CACHE_DIR, "widget_moffett.png")
 
-FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+DEFAULT_FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+FONT_PATH = DEFAULT_FONT_PATH
 
 # Distinguishable colors
 COLOR_MTV = "#00D2FF"      # Vibrant bright cyan/blue
 COLOR_MOFFETT = "#FFA500"  # Warm amber/orange
 
-def draw_single_num(num_str, color, panel_w=32, panel_h=38, font_size=None):
+def get_font_path(config=None):
+    if config:
+        custom_path = config.get("font_path")
+        if custom_path and os.path.exists(custom_path):
+            return custom_path
+        weight = str(config.get("font_weight", "")).lower()
+        if weight == "bold":
+            p = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            if os.path.exists(p):
+                return p
+        elif weight in ("extralight", "light"):
+            p = "/usr/share/fonts/truetype/dejavu/DejaVuSans-ExtraLight.ttf"
+            if os.path.exists(p):
+                return p
+        elif weight == "condensed":
+            p = "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf"
+            if os.path.exists(p):
+                return p
+    if os.path.exists(DEFAULT_FONT_PATH):
+        return DEFAULT_FONT_PATH
+    return "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+def draw_single_num(num_str, color, panel_w=32, panel_h=38, font_size=None, font_path=None):
     img = Image.new("RGBA", (panel_w, panel_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     if font_size is None:
         font_size = 42 if len(num_str) <= 1 else 19
-    font = ImageFont.truetype(FONT_PATH, font_size)
+    fpath = font_path or get_font_path()
+    font = ImageFont.truetype(fpath, font_size)
     bbox = font.getbbox(num_str)
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
@@ -36,10 +60,11 @@ def draw_single_num(num_str, color, panel_w=32, panel_h=38, font_size=None):
     draw.text((x, y), num_str, font=font, fill=color)
     return img
 
-def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=72, font_size=None):
+def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=72, font_size=None, font_path=None):
     img = Image.new("RGBA", (panel_w, panel_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     cell_h = panel_h // 2
+    fpath = font_path or get_font_path()
 
     def resolve_size(s):
         if font_size is not None:
@@ -50,7 +75,7 @@ def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=72,
     bot_size = resolve_size(bot_str)
 
     # Top number centered in top half
-    font_top = ImageFont.truetype(FONT_PATH, top_size)
+    font_top = ImageFont.truetype(fpath, top_size)
     b1 = font_top.getbbox(top_str)
     w1 = b1[2] - b1[0]
     h1 = b1[3] - b1[1]
@@ -59,7 +84,7 @@ def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=72,
     draw.text((x1, y1), top_str, font=font_top, fill=top_color)
 
     # Bottom number centered in bottom half
-    font_bot = ImageFont.truetype(FONT_PATH, bot_size)
+    font_bot = ImageFont.truetype(fpath, bot_size)
     b2 = font_bot.getbbox(bot_str)
     w2 = b2[2] - b2[0]
     h2 = b2[3] - b2[1]
@@ -313,6 +338,8 @@ def render():
     mtv_past = is_game_more_than_3h_past(mtv_call)
     moffett_past = is_game_more_than_3h_past(moffett_call)
 
+    fpath = get_font_path(config)
+
     # Ball icon for idle/past games
     img_ball = make_basketball(32, 34)
 
@@ -320,14 +347,14 @@ def render():
     if mtv_past:
         save_atomic(img_ball, OUTPUT_MTV)
     else:
-        img_mtv = draw_single_num(mtv_count, COLOR_MTV)
+        img_mtv = draw_single_num(mtv_count, COLOR_MTV, font_path=fpath)
         save_atomic(img_mtv, OUTPUT_MTV)
 
     # Always generate dedicated Moffett image (or ball if >3h past)
     if moffett_past:
         save_atomic(img_ball, OUTPUT_MOFFETT)
     else:
-        img_moffett = draw_single_num(moffett_count, COLOR_MOFFETT)
+        img_moffett = draw_single_num(moffett_count, COLOR_MOFFETT, font_path=fpath)
         save_atomic(img_moffett, OUTPUT_MOFFETT)
 
     # Generate the main widget image based on active mode
@@ -349,13 +376,13 @@ def render():
         if mtv_past and moffett_past:
             save_atomic(img_ball, OUTPUT_MAIN)
         elif mtv_past and not moffett_past:
-            img_stacked = draw_stacked("-", COLOR_MTV, moffett_count, COLOR_MOFFETT)
+            img_stacked = draw_stacked("-", COLOR_MTV, moffett_count, COLOR_MOFFETT, font_path=fpath)
             save_atomic(img_stacked, OUTPUT_MAIN)
         elif not mtv_past and moffett_past:
-            img_stacked = draw_stacked(mtv_count, COLOR_MTV, "-", COLOR_MOFFETT)
+            img_stacked = draw_stacked(mtv_count, COLOR_MTV, "-", COLOR_MOFFETT, font_path=fpath)
             save_atomic(img_stacked, OUTPUT_MAIN)
         else:
-            img_stacked = draw_stacked(mtv_count, COLOR_MTV, moffett_count, COLOR_MOFFETT)
+            img_stacked = draw_stacked(mtv_count, COLOR_MTV, moffett_count, COLOR_MOFFETT, font_path=fpath)
             save_atomic(img_stacked, OUTPUT_MAIN)
 
     if "--no-refresh" not in sys.argv:

@@ -89,9 +89,10 @@ Inspect `/tmp/panel_crop.png` to verify alignment, font size, margins, and color
 * **Color Coding**:
   * **MTV**: Cyan/Blue (`#00D2FF`)
   * **Moffett Place**: Amber/Orange (`#FFA500`)
-* **Dynamic Font Sizing in [`lib/render_image.py`](lib/render_image.py)**:
-  * **Single digits (`0`–`9` or `-`)**: Render at **42pt** bold (`DejaVuSans-Bold.ttf`). Spans ~29px of the 32px canvas width with ~2px margins on each side.
-  * **Double digits (`10+`)**: Render at **19pt** bold to prevent horizontal clipping within the 32px canvas.
+* **Font & Dynamic Sizing in [`lib/render_image.py`](lib/render_image.py)**:
+  * **Default Font**: `DejaVuSans.ttf` (Book/Regular weight). Configurable via `font_weight` (`"regular"`, `"bold"`, `"extralight"`, `"condensed"`) or `font_path` in `~/.config/bball-chat/config.json`.
+  * **Single digits (`0`–`9` or `-`)**: Render at **42pt**. Spans ~27px of the 32px canvas width with ~2.5px margins on each side.
+  * **Double digits (`10+`)**: Render at **19pt** to prevent horizontal clipping within the 32px canvas.
   * **Stacked Canvas (`draw_stacked`)**: `panel_w=32`, `panel_h=72` (two `36px` cells). Exact bounding-box centering per cell.
   * **Single Number Canvas (`draw_single_num`)**: `panel_w=32`, `panel_h=38`.
 
