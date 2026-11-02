@@ -22,11 +22,11 @@ FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 COLOR_MTV = "#00D2FF"      # Vibrant bright cyan/blue
 COLOR_MOFFETT = "#FFA500"  # Warm amber/orange
 
-def draw_single_num(num_str, color, panel_w=32, panel_h=34, font_size=None):
+def draw_single_num(num_str, color, panel_w=32, panel_h=38, font_size=None):
     img = Image.new("RGBA", (panel_w, panel_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     if font_size is None:
-        font_size = 26 if len(num_str) <= 1 else 19
+        font_size = 42 if len(num_str) <= 1 else 19
     font = ImageFont.truetype(FONT_PATH, font_size)
     bbox = font.getbbox(num_str)
     w = bbox[2] - bbox[0]
@@ -36,7 +36,7 @@ def draw_single_num(num_str, color, panel_w=32, panel_h=34, font_size=None):
     draw.text((x, y), num_str, font=font, fill=color)
     return img
 
-def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=54, font_size=None):
+def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=72, font_size=None):
     img = Image.new("RGBA", (panel_w, panel_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     cell_h = panel_h // 2
@@ -44,7 +44,7 @@ def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=54,
     def resolve_size(s):
         if font_size is not None:
             return font_size
-        return 26 if len(s) <= 1 else 19
+        return 42 if len(s) <= 1 else 19
 
     top_size = resolve_size(top_str)
     bot_size = resolve_size(bot_str)

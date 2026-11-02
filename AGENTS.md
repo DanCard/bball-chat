@@ -90,10 +90,10 @@ Inspect `/tmp/panel_crop.png` to verify alignment, font size, margins, and color
   * **MTV**: Cyan/Blue (`#00D2FF`)
   * **Moffett Place**: Amber/Orange (`#FFA500`)
 * **Dynamic Font Sizing in [`lib/render_image.py`](lib/render_image.py)**:
-  * **Single digits (`0`–`9` or `-`)**: Render at **26pt** bold (`DejaVuSans-Bold.ttf`). Centered with ~7px margins on each side.
+  * **Single digits (`0`–`9` or `-`)**: Render at **42pt** bold (`DejaVuSans-Bold.ttf`). Spans ~29px of the 32px canvas width with ~2px margins on each side.
   * **Double digits (`10+`)**: Render at **19pt** bold to prevent horizontal clipping within the 32px canvas.
-  * **Stacked Canvas (`draw_stacked`)**: `panel_w=32`, `panel_h=54` (two `27px` cells). Exact bounding-box centering per cell.
-  * **Single Number Canvas (`draw_single_num`)**: `panel_w=32`, `panel_h=34`.
+  * **Stacked Canvas (`draw_stacked`)**: `panel_w=32`, `panel_h=72` (two `36px` cells). Exact bounding-box centering per cell.
+  * **Single Number Canvas (`draw_single_num`)**: `panel_w=32`, `panel_h=38`.
 
 ---
 
