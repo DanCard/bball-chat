@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getConfig, saveConfig, getStatus } from '../lib/config.js';
+import { isGameMoreThan3hPast } from '../lib/game_time.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const POLLER_BIN = path.join(__dirname, 'bball-poller');
@@ -20,6 +21,7 @@ Usage: bball <command>
 
 Commands:
   status        Show current game calls and RSVP counts (default)
+  attendees [s] Show confirmed attendees and maybes (alias: who)
   all           Set display to show both sites: MTV and Moffett Place
   moffett       Set display to show only Moffett Place
   mtv           Set display to show only Lunch bball MTV
@@ -42,13 +44,23 @@ function showStatus() {
     return;
   }
 
-  const mtv = status.spaces.mtv?.active_call;
-  const mp = status.spaces.moffett?.active_call;
+  const now = new Date();
+  const rawMtv = status.spaces.mtv?.active_call;
+  const rawMp = status.spaces.moffett?.active_call;
+
+  const mtv = (rawMtv && !isGameMoreThan3hPast(rawMtv, now)) ? rawMtv : null;
+  const mp = (rawMp && !isGameMoreThan3hPast(rawMp, now)) ? rawMp : null;
 
   console.log('1. Lunch bball MTV:');
   if (mtv) {
     const plusNote = mtv.plus_count > 0 ? ` (+${mtv.plus_count})` : '';
     console.log(`   RSVP Count : ${mtv.basketball_count} 🏀${plusNote} ${mtv.question_count > 0 ? `(${mtv.question_count} ❓)` : ''}`);
+    if (mtv.attendees && mtv.attendees.length > 0) {
+      console.log(`   Attendees  : ${mtv.attendees.join(', ')}`);
+    }
+    if (mtv.maybes && mtv.maybes.length > 0) {
+      console.log(`   Maybes     : ${mtv.maybes.join(', ')}`);
+    }
     console.log(`   Timing/Call: ${mtv.text}`);
     console.log(`   Organizer  : ${mtv.sender}`);
     console.log(`   Is Today   : ${mtv.is_today ? 'YES' : 'No'}`);
@@ -60,6 +72,12 @@ function showStatus() {
   if (mp) {
     const plusNote = mp.plus_count > 0 ? ` (+${mp.plus_count})` : '';
     console.log(`   RSVP Count : ${mp.basketball_count} 🏀${plusNote} ${mp.question_count > 0 ? `(${mp.question_count} ❓)` : ''}`);
+    if (mp.attendees && mp.attendees.length > 0) {
+      console.log(`   Attendees  : ${mp.attendees.join(', ')}`);
+    }
+    if (mp.maybes && mp.maybes.length > 0) {
+      console.log(`   Maybes     : ${mp.maybes.join(', ')}`);
+    }
     console.log(`   Timing/Call: ${mp.text}`);
     console.log(`   Organizer  : ${mp.sender}`);
     console.log(`   Is Today   : ${mp.is_today ? 'YES' : 'No'}`);
@@ -68,7 +86,64 @@ function showStatus() {
   }
 
   console.log(`\nLast Updated: ${status.updated_at ? new Date(status.updated_at).toLocaleString() : 'Never'}`);
-  console.log(`Current Panel Text: MTV 1st, Moffett 2nd -> "🏀 ${mtv?.basketball_count ?? '-'} ${mp?.basketball_count ?? '-'}"`);
+  const mtvText = mtv ? mtv.basketball_count : '-';
+  const mpText = mp ? mp.basketball_count : '-';
+  console.log(`Current Panel Text: MTV 1st, Moffett 2nd -> "🏀 ${mtvText} ${mpText}"`);
+}
+
+function showAttendees(targetSite) {
+  const status = getStatus();
+  if (!status || !status.spaces) {
+    console.log('No status cache found. Run `bball poll` to fetch data.');
+    return;
+  }
+
+  const site = (targetSite || '').toLowerCase();
+
+  console.log('========================================');
+  console.log('Pickup Basketball Attendees');
+  console.log('========================================\n');
+
+  const now = new Date();
+  const showSite = (title, key) => {
+    const space = status.spaces[key];
+    const rawCall = space?.active_call;
+    const call = (rawCall && !isGameMoreThan3hPast(rawCall, now)) ? rawCall : null;
+    console.log(`• ${title}:`);
+    if (!call) {
+      console.log('  No active game call.\n');
+      return;
+    }
+    const todayMarker = call.is_today ? ' [TODAY]' : '';
+    console.log(`  Call: ${call.text}${todayMarker}`);
+    const count = call.attendees?.length || call.basketball_count;
+    console.log(`  Confirmed (${count}):`);
+    if (call.attendees && call.attendees.length > 0) {
+      for (const a of call.attendees) {
+        console.log(`    - ${a}`);
+      }
+    } else {
+      console.log('    (None listed)');
+    }
+    if (call.maybes && call.maybes.length > 0) {
+      console.log(`  Maybe (${call.maybes.length}):`);
+      for (const m of call.maybes) {
+        console.log(`    - ${m}`);
+      }
+    }
+    console.log('');
+  };
+
+  if (!site || site === 'all') {
+    showSite('Lunch bball MTV', 'mtv');
+    showSite('Moffett Place Basketball', 'moffett');
+  } else if (site === 'mtv') {
+    showSite('Lunch bball MTV', 'mtv');
+  } else if (site === 'moffett' || site === 'mp') {
+    showSite('Moffett Place Basketball', 'moffett');
+  } else {
+    console.error(`Unknown site: ${targetSite}. Use 'mtv', 'moffett', or omit for all.`);
+  }
 }
 
 function setMode(newMode) {
@@ -121,6 +196,11 @@ const cmd = (args[0] || 'status').toLowerCase();
 switch (cmd) {
   case 'status':
     showStatus();
+    break;
+  case 'attendees':
+  case 'who':
+  case 'players':
+    showAttendees(args[1]);
     break;
   case 'all':
     setMode('all');

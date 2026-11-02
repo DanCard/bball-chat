@@ -49,7 +49,12 @@ def draw_single_num(num_str, color, panel_w=32, panel_h=38, font_size=None, font
     img = Image.new("RGBA", (panel_w, panel_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     if font_size is None:
-        font_size = 42 if len(num_str) <= 1 else 19
+        if len(num_str) <= 1:
+            font_size = 42
+        elif num_str == "11":
+            font_size = 31
+        else:
+            font_size = 26
     fpath = font_path or get_font_path()
     font = ImageFont.truetype(fpath, font_size)
     bbox = font.getbbox(num_str)
@@ -69,7 +74,11 @@ def draw_stacked(top_str, top_color, bot_str, bot_color, panel_w=32, panel_h=72,
     def resolve_size(s):
         if font_size is not None:
             return font_size
-        return 42 if len(s) <= 1 else 19
+        if len(s) <= 1:
+            return 42
+        if s == "11":
+            return 31
+        return 26
 
     top_size = resolve_size(top_str)
     bot_size = resolve_size(bot_str)
@@ -274,11 +283,19 @@ def is_game_more_than_3h_past(call, now=None):
 
     end_hour = 13
     end_minute = 0
-    m_range = re.search(r'-\s*(\d{1,2})(?::(\d{2}))?\s*(a|p|am|pm)?\b', lower)
+    m_range = re.search(r'-\s*(\d{1,4}(?::\d{2})?)\s*(a|p|am|pm)?\b', lower)
     if m_range:
-        h = int(m_range.group(1))
-        m = int(m_range.group(2) or 0)
-        meridiem = m_range.group(3) or ''
+        time_str = m_range.group(1)
+        meridiem = (m_range.group(2) or '').lower()
+        if ':' in time_str:
+            parts = time_str.split(':')
+            h, m = int(parts[0]), int(parts[1])
+        elif len(time_str) == 3:
+            h, m = int(time_str[0]), int(time_str[1:])
+        elif len(time_str) == 4:
+            h, m = int(time_str[:2]), int(time_str[2:])
+        else:
+            h, m = int(time_str), 0
         if 'p' in meridiem and h < 12:
             h += 12
         elif not meridiem and h < 7:
@@ -289,11 +306,19 @@ def is_game_more_than_3h_past(call, now=None):
         end_hour = 13
         end_minute = 0
     else:
-        m_start = re.search(r'(?:at|@)\s*(\d{1,2})(?::(\d{2}))?\s*(a|p|am|pm)?\b', lower)
+        m_start = re.search(r'(?:at|@)\s*(\d{1,4}(?::\d{2})?)\s*(a|p|am|pm)?\b', lower)
         if m_start:
-            h = int(m_start.group(1))
-            m = int(m_start.group(2) or 0)
-            meridiem = m_start.group(3) or ''
+            time_str = m_start.group(1)
+            meridiem = (m_start.group(2) or '').lower()
+            if ':' in time_str:
+                parts = time_str.split(':')
+                h, m = int(parts[0]), int(parts[1])
+            elif len(time_str) == 3:
+                h, m = int(time_str[0]), int(time_str[1:])
+            elif len(time_str) == 4:
+                h, m = int(time_str[:2]), int(time_str[2:])
+            else:
+                h, m = int(time_str), 0
             if 'p' in meridiem and h < 12:
                 h += 12
             elif not meridiem and h < 7:

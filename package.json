@@ -1,0 +1,9 @@
+{
+  "name": "bball-chat",
+  "version": "1.0.0",
+  "description": "Live pickup basketball participant counter for XFCE desktop panel",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
