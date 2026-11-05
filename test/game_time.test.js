@@ -1,6 +1,6 @@
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isGameMoreThan3hPast, getGameEndDate } from '../lib/game_time.js';
+import { isGameMoreThan3hPast, getGameEndDate, isGameToday } from '../lib/game_time.js';
 import { formatGenmonXml } from '../lib/format.js';
 
 describe('Game Time & Expiration (> 3 hours past)', () => {
@@ -95,6 +95,9 @@ describe('Game Time & Expiration (> 3 hours past)', () => {
   });
 });
 
+// A game call that is always "today" and not yet over, whenever the tests run
+const TODAY_CALL_TEXT = 'Game call today, 9p-1159p @GARfield';
+
 describe('Popup & List Tooltip Integration (> 3h past filtering)', () => {
   it('does not list an expired game in the Genmon popup tooltip', () => {
     const statusData = {
@@ -102,8 +105,8 @@ describe('Popup & List Tooltip Integration (> 3h past filtering)', () => {
       spaces: {
         mtv: {
           active_call: {
-            text: 'Game call for Mon, Nov 2, 1145a-115p @GARfield',
-            create_time: '2026-11-02T02:00:00Z',
+            text: TODAY_CALL_TEXT,
+            create_time: new Date().toISOString(),
             basketball_count: 8,
             plus_count: 1,
             question_count: 2,
@@ -173,10 +176,11 @@ describe('CLI List Output (> 3h past filtering)', () => {
     const execFileAsync = promisify(execFile);
 
     const bballBin = new URL('../bin/bball', import.meta.url).pathname;
-    const cacheFile = path.join(os.homedir(), '.cache', 'bball-chat', 'status.json');
-
-    // Save existing cache to restore after test
-    const originalCache = fs.existsSync(cacheFile) ? fs.readFileSync(cacheFile, 'utf8') : null;
+    // Run against a throwaway HOME so the real ~/.cache and ~/.config are never touched
+    const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'bball-test-'));
+    const cacheFile = path.join(tmpHome, '.cache', 'bball-chat', 'status.json');
+    fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
+    const execOpts = { env: { ...process.env, HOME: tmpHome } };
 
     try {
       // Write mock fixture: MTV active today, Moffett expired (Oct 30)
@@ -185,8 +189,8 @@ describe('CLI List Output (> 3h past filtering)', () => {
         spaces: {
           mtv: {
             active_call: {
-              text: 'Game call for Mon, Nov 2, 1145a-115p @GARfield',
-              create_time: '2026-11-02T02:00:00Z',
+              text: TODAY_CALL_TEXT,
+              create_time: new Date().toISOString(),
               basketball_count: 8,
               plus_count: 1,
               question_count: 2,
@@ -211,7 +215,7 @@ describe('CLI List Output (> 3h past filtering)', () => {
       fs.writeFileSync(cacheFile, JSON.stringify(mockStatus, null, 2), 'utf8');
 
       // Test 'bball status'
-      const { stdout: statusOut } = await execFileAsync(process.execPath, [bballBin, 'status']);
+      const { stdout: statusOut } = await execFileAsync(process.execPath, [bballBin, 'status'], execOpts);
       // MTV (today) is active
       assert.match(statusOut, /1\. Lunch bball MTV:/);
       assert.match(statusOut, /RSVP Count : 8 🏀/);
@@ -223,14 +227,25 @@ describe('CLI List Output (> 3h past filtering)', () => {
       assert.doesNotMatch(statusOut, /Kaushik Roy/);
 
       // Test 'bball attendees'
-      const { stdout: attOut } = await execFileAsync(process.execPath, [bballBin, 'attendees']);
+      const { stdout: attOut } = await execFileAsync(process.execPath, [bballBin, 'attendees'], execOpts);
       assert.match(attOut, /• Lunch bball MTV:/);
       assert.match(attOut, /• Moffett Place Basketball:\s+No active game call\./);
       assert.doesNotMatch(attOut, /Kaushik Roy/);
     } finally {
-      if (originalCache) {
-        fs.writeFileSync(cacheFile, originalCache, 'utf8');
-      }
+      fs.rmSync(tmpHome, { recursive: true, force: true });
     }
+  });
+});
+
+describe('isGameToday', () => {
+  const call = {
+    text: 'GAME CALL Tomorrow Thursday at Garfield at noon',
+    create_time: new Date(2026, 10, 4, 18, 0).toISOString() // posted Wed Nov 4
+  };
+  it('treats a "tomorrow" call posted yesterday as today', () => {
+    assert.equal(isGameToday(call, new Date(2026, 10, 5, 9, 0)), true);
+  });
+  it('is not today on the day it was posted', () => {
+    assert.equal(isGameToday(call, new Date(2026, 10, 4, 20, 0)), false);
   });
 });
