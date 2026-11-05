@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getConfig, saveConfig, getStatus } from '../lib/config.js';
-import { isGameMoreThan3hPast } from '../lib/game_time.js';
+import { isGameExpired } from '../lib/game_time.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const POLLER_BIN = path.join(__dirname, 'bball-poller');
@@ -48,8 +48,8 @@ function showStatus() {
   const rawMtv = status.spaces.mtv?.active_call;
   const rawMp = status.spaces.moffett?.active_call;
 
-  const mtv = (rawMtv && !isGameMoreThan3hPast(rawMtv, now)) ? rawMtv : null;
-  const mp = (rawMp && !isGameMoreThan3hPast(rawMp, now)) ? rawMp : null;
+  const mtv = (rawMtv && !isGameExpired(rawMtv, now)) ? rawMtv : null;
+  const mp = (rawMp && !isGameExpired(rawMp, now)) ? rawMp : null;
 
   console.log('1. Lunch bball MTV:');
   if (mtv) {
@@ -108,7 +108,7 @@ function showAttendees(targetSite) {
   const showSite = (title, key) => {
     const space = status.spaces[key];
     const rawCall = space?.active_call;
-    const call = (rawCall && !isGameMoreThan3hPast(rawCall, now)) ? rawCall : null;
+    const call = (rawCall && !isGameExpired(rawCall, now)) ? rawCall : null;
     console.log(`• ${title}:`);
     if (!call) {
       console.log('  No active game call.\n');

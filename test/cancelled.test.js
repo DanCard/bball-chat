@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isCancelled } from '../lib/chat.js';
+import { isCancelled, isCallRequest } from '../lib/chat.js';
 
 describe('Cancelled Game Call Detection', () => {
   it('detects bracketed cancelled tags', () => {
@@ -31,5 +31,20 @@ describe('Cancelled Game Call Detection', () => {
     assert.equal(isCancelled('Pickup at Garfield today 12pm'), false);
     assert.equal(isCancelled(null), false);
     assert.equal(isCancelled(''), false);
+  });
+});
+
+describe('Game Call Request Detection', () => {
+  it('detects requests for someone else to post the call', () => {
+    assert.equal(isCallRequest("heads up i'm in SLC for the k8s conference next week so someone else do the game call"), true);
+    assert.equal(isCallRequest('Can someone post the call tomorrow?'), true);
+    assert.equal(isCallRequest('anyone want to do the game call for Friday?'), true);
+    assert.equal(isCallRequest('who can make the call today'), true);
+  });
+
+  it('does not flag actual game calls', () => {
+    assert.equal(isCallRequest('Game call for Fri, Nov 6 1130a-130p @PSB'), false);
+    assert.equal(isCallRequest('GAME CALL Tomorrow Thursday at Garfield at noon'), false);
+    assert.equal(isCallRequest('call for run today 5-7pm at MAT1'), false);
   });
 });

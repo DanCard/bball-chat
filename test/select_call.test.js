@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { selectGameCall } from '../lib/chat.js';
+import { selectGameCall, isTrackedGameCall } from '../lib/chat.js';
 import { getGameEndDate } from '../lib/game_time.js';
 
 function cand(text, create_time, now) {
@@ -40,5 +40,20 @@ describe('selectGameCall', () => {
 
   it('returns null with no candidates', () => {
     assert.equal(selectGameCall([]), null);
+  });
+});
+
+describe('isTrackedGameCall', () => {
+  it('ignores messages with zero RSVPs, even if they look like a game call', () => {
+    assert.equal(isTrackedGameCall('Game call for Fri, Nov 6 1130a-130p @PSB', 0), false);
+  });
+  it('tracks a game call with RSVPs', () => {
+    assert.equal(isTrackedGameCall('Game call for Fri, Nov 6 1130a-130p @PSB', 8), true);
+  });
+  it('ignores a request for someone else to do the call, even with reactions', () => {
+    assert.equal(isTrackedGameCall("heads up i'm in SLC next week so someone else do the game call", 2), false);
+  });
+  it('ignores cancelled calls, even with reactions', () => {
+    assert.equal(isTrackedGameCall('[Cancelled] Game call for Tues, Nov 3, 1145a-115p @GARfield', 5), false);
   });
 });

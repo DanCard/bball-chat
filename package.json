@@ -4,6 +4,6 @@
   "description": "Live pickup basketball participant counter for XFCE desktop panel",
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test && python3 -m unittest discover -s test"
   }
 }

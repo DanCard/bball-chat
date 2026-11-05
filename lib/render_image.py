@@ -214,7 +214,10 @@ def make_basketball(panel_w=32, panel_h=34):
 
     return res.resize((panel_w, panel_h), Image.Resampling.LANCZOS)
 
-def is_game_more_than_3h_past(call, now=None):
+# Hide a game's info once this many hours have passed since its scheduled end
+GAME_EXPIRY_HOURS = 2.0
+
+def is_game_expired(call, now=None):
     if not call or not isinstance(call, dict):
         return True
 
@@ -244,11 +247,13 @@ def is_game_more_than_3h_past(call, now=None):
                     'wed': 2, 'wednesday': 2, 'thu': 3, 'thur': 3, 'thurs': 3, 'thursday': 3,
                     'fri': 4, 'friday': 4, 'sat': 5, 'saturday': 5, 'sun': 6, 'sunday': 6}
 
+    # "today"/"tomorrow" are relative to when the call was posted, not to now
+    post_date = (msg_dt or now).date()
     game_date = None
     if 'today' in lower:
-        game_date = now.date()
-    elif 'tomorrow' in lower:
-        game_date = now.date() + timedelta(days=1)
+        game_date = post_date
+    elif re.search(r'\b(?:tomorrow|tmrw)\b', lower):
+        game_date = post_date + timedelta(days=1)
 
     if not game_date:
         m_month = re.search(r'\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\b', lower)
@@ -330,7 +335,7 @@ def is_game_more_than_3h_past(call, now=None):
         game_end_dt = datetime(game_date.year, game_date.month, game_date.day,
                                end_hour, end_minute, tzinfo=tz)
         hours_since_end = (now - game_end_dt).total_seconds() / 3600.0
-        return hours_since_end > 3.0
+        return hours_since_end > GAME_EXPIRY_HOURS
     except Exception:
         return True
 
@@ -360,22 +365,22 @@ def render():
     mtv_count = str(mtv_call.get("basketball_count", "-"))
     moffett_count = str(moffett_call.get("basketball_count", "-"))
 
-    mtv_past = is_game_more_than_3h_past(mtv_call)
-    moffett_past = is_game_more_than_3h_past(moffett_call)
+    mtv_past = is_game_expired(mtv_call)
+    moffett_past = is_game_expired(moffett_call)
 
     fpath = get_font_path(config)
 
     # Ball icon for idle/past games
     img_ball = make_basketball(32, 34)
 
-    # Always generate dedicated MTV image (or ball if >3h past)
+    # Always generate dedicated MTV image (or ball if expired)
     if mtv_past:
         save_atomic(img_ball, OUTPUT_MTV)
     else:
         img_mtv = draw_single_num(mtv_count, COLOR_MTV, font_path=fpath)
         save_atomic(img_mtv, OUTPUT_MTV)
 
-    # Always generate dedicated Moffett image (or ball if >3h past)
+    # Always generate dedicated Moffett image (or ball if expired)
     if moffett_past:
         save_atomic(img_ball, OUTPUT_MOFFETT)
     else:

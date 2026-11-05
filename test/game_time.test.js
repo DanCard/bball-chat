@@ -1,9 +1,9 @@
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isGameMoreThan3hPast, getGameEndDate, isGameToday } from '../lib/game_time.js';
+import { isGameExpired, getGameEndDate, isGameToday } from '../lib/game_time.js';
 import { formatGenmonXml } from '../lib/format.js';
 
-describe('Game Time & Expiration (> 3 hours past)', () => {
+describe('Game Time & Expiration (> 2 hours past)', () => {
   it('correctly parses game end dates for various time formats', () => {
     // 1145a-115p on Nov 2, 2026
     const call1 = {
@@ -47,7 +47,7 @@ describe('Game Time & Expiration (> 3 hours past)', () => {
     assert.equal(endNoon.getMinutes(), 0);
   });
 
-  it('marks a game as active while ongoing and within 3 hours after game end', () => {
+  it('marks a game as active while ongoing and within 2 hours after game end', () => {
     const call = {
       text: 'Game call for Mon, Nov 2, 1145a-115p @GARfield',
       create_time: '2026-11-02T02:00:00Z'
@@ -55,34 +55,34 @@ describe('Game Time & Expiration (> 3 hours past)', () => {
 
     // Nov 2 at 12:30 PM (game ongoing)
     const tOngoing = new Date(2026, 10, 2, 12, 30, 0);
-    assert.equal(isGameMoreThan3hPast(call, tOngoing), false, 'Ongoing game should not be past');
+    assert.equal(isGameExpired(call, tOngoing), false, 'Ongoing game should not be past');
 
     // Nov 2 at 2:00 PM (45 min after game end 1:15 PM)
     const t45mPast = new Date(2026, 10, 2, 14, 0, 0);
-    assert.equal(isGameMoreThan3hPast(call, t45mPast), false, '45 min past end should not be expired');
+    assert.equal(isGameExpired(call, t45mPast), false, '45 min past end should not be expired');
 
-    // Nov 2 at 4:14 PM (2 hours 59 min after game end 1:15 PM)
-    const t2h59mPast = new Date(2026, 10, 2, 16, 14, 0);
-    assert.equal(isGameMoreThan3hPast(call, t2h59mPast), false, '2h 59m past end should not be expired');
+    // Nov 2 at 3:14 PM (1 hour 59 min after game end 1:15 PM)
+    const t1h59mPast = new Date(2026, 10, 2, 15, 14, 0);
+    assert.equal(isGameExpired(call, t1h59mPast), false, '1h 59m past end should not be expired');
   });
 
-  it('marks a game as expired once more than 3 hours have elapsed past game time', () => {
+  it('marks a game as expired once more than 2 hours have elapsed past game time', () => {
     const call = {
       text: 'Game call for Mon, Nov 2, 1145a-115p @GARfield',
       create_time: '2026-11-02T02:00:00Z'
     };
 
-    // Nov 2 at 4:16 PM (3 hours 1 min after game end 1:15 PM)
-    const t3h1mPast = new Date(2026, 10, 2, 16, 16, 0);
-    assert.equal(isGameMoreThan3hPast(call, t3h1mPast), true, '3h 1m past end must be expired');
+    // Nov 2 at 3:16 PM (2 hours 1 min after game end 1:15 PM)
+    const t2h1mPast = new Date(2026, 10, 2, 15, 16, 0);
+    assert.equal(isGameExpired(call, t2h1mPast), true, '2h 1m past end must be expired');
 
     // Nov 2 at 8:00 PM (evening)
     const tEvening = new Date(2026, 10, 2, 20, 0, 0);
-    assert.equal(isGameMoreThan3hPast(call, tEvening), true, 'Evening time must be expired');
+    assert.equal(isGameExpired(call, tEvening), true, 'Evening time must be expired');
 
     // Next day Nov 3
     const tNextDay = new Date(2026, 10, 3, 10, 0, 0);
-    assert.equal(isGameMoreThan3hPast(call, tNextDay), true, 'Next day must be expired');
+    assert.equal(isGameExpired(call, tNextDay), true, 'Next day must be expired');
   });
 
   it('marks past days (e.g. Oct 30 on Nov 2) as expired', () => {
@@ -91,14 +91,14 @@ describe('Game Time & Expiration (> 3 hours past)', () => {
       create_time: '2026-10-28T20:11:28Z'
     };
     const nowNov2 = new Date(2026, 10, 2, 10, 0, 0);
-    assert.equal(isGameMoreThan3hPast(moffettCall, nowNov2), true, 'Call from Oct 30 on Nov 2 must be expired');
+    assert.equal(isGameExpired(moffettCall, nowNov2), true, 'Call from Oct 30 on Nov 2 must be expired');
   });
 });
 
 // A game call that is always "today" and not yet over, whenever the tests run
 const TODAY_CALL_TEXT = 'Game call today, 9p-1159p @GARfield';
 
-describe('Popup & List Tooltip Integration (> 3h past filtering)', () => {
+describe('Popup & List Tooltip Integration (> 2h past filtering)', () => {
   it('does not list an expired game in the Genmon popup tooltip', () => {
     const statusData = {
       updated_at: new Date().toISOString(),
@@ -136,7 +136,7 @@ describe('Popup & List Tooltip Integration (> 3h past filtering)', () => {
     assert.match(xml, /RSVP: 8 🏀/);
     assert.match(xml, /Attendees: Henry Wong/);
 
-    // Moffett (Oct 30, > 3h past) MUST NOT be listed with call details, RSVP or attendees
+    // Moffett (Oct 30, > 2h past) MUST NOT be listed with call details, RSVP or attendees
     assert.match(xml, /Moffett Place: No active game call found/);
     assert.doesNotMatch(xml, /Oct 30/);
     assert.doesNotMatch(xml, /RSVP: 11 🏀/);
@@ -166,8 +166,8 @@ describe('Popup & List Tooltip Integration (> 3h past filtering)', () => {
   });
 });
 
-describe('CLI List Output (> 3h past filtering)', () => {
-  it('excludes games > 3h past from CLI status and attendees output', async () => {
+describe('CLI List Output (> 2h past filtering)', () => {
+  it('excludes games > 2h past from CLI status and attendees output', async () => {
     const { execFile } = await import('node:child_process');
     const { promisify } = await import('node:util');
     const fs = await import('node:fs');
@@ -221,7 +221,7 @@ describe('CLI List Output (> 3h past filtering)', () => {
       assert.match(statusOut, /RSVP Count : 8 🏀/);
       assert.match(statusOut, /Henry Wong/);
 
-      // Moffett (Oct 30) is >3h past and must show 'No active game call.'
+      // Moffett (Oct 30) is expired and must show 'No active game call.'
       assert.match(statusOut, /2\. Moffett Place Basketball:\s+No active game call\./);
       assert.doesNotMatch(statusOut, /Oct 30/);
       assert.doesNotMatch(statusOut, /Kaushik Roy/);
