@@ -4,7 +4,7 @@ import os
 import json
 import subprocess
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 CACHE_DIR = os.path.expanduser("~/.cache/bball-chat")
@@ -214,130 +214,27 @@ def make_basketball(panel_w=32, panel_h=34):
 
     return res.resize((panel_w, panel_h), Image.Resampling.LANCZOS)
 
-# Hide a game's info once this many hours have passed since its scheduled end
-GAME_EXPIRY_HOURS = 2.0
-
 def is_game_expired(call, now=None):
+    """True if the call's info should no longer be shown.
+
+    The expiry time is computed by the JS poller (lib/game_time.js) and stored
+    as `expires_at` in status.json, so all date/time rules live in one place.
+    A call without a valid `expires_at` is treated as expired.
+    """
     if not call or not isinstance(call, dict):
         return True
-
-    tz = datetime.now().astimezone().tzinfo
-    if now is None:
-        now = datetime.now(tz)
-    elif now.tzinfo is None:
-        now = now.replace(tzinfo=tz)
-
-    text = call.get('text', '')
-    create_time_str = call.get('create_time', '')
-    if not text and not create_time_str:
+    expires_str = call.get('expires_at')
+    if not expires_str:
         return True
-
-    msg_dt = None
-    if create_time_str:
-        try:
-            clean_str = create_time_str.replace('Z', '+00:00')
-            msg_dt = datetime.fromisoformat(clean_str).astimezone(tz)
-        except Exception:
-            pass
-
-    lower = text.lower()
-    months = {'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
-              'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12}
-    days_of_week = {'mon': 0, 'monday': 0, 'tue': 1, 'tues': 1, 'tuesday': 1,
-                    'wed': 2, 'wednesday': 2, 'thu': 3, 'thur': 3, 'thurs': 3, 'thursday': 3,
-                    'fri': 4, 'friday': 4, 'sat': 5, 'saturday': 5, 'sun': 6, 'sunday': 6}
-
-    # "today"/"tomorrow" are relative to when the call was posted, not to now
-    post_date = (msg_dt or now).date()
-    game_date = None
-    if 'today' in lower:
-        game_date = post_date
-    elif re.search(r'\b(?:tomorrow|tmrw)\b', lower):
-        game_date = post_date + timedelta(days=1)
-
-    if not game_date:
-        m_month = re.search(r'\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})\b', lower)
-        if m_month:
-            m_num = months[m_month.group(1)[:3]]
-            d_num = int(m_month.group(2))
-            year = msg_dt.year if msg_dt else now.year
-            game_date = datetime(year, m_num, d_num).date()
-
-    if not game_date:
-        m_slash = re.search(r'\b(\d{1,2})/(\d{1,2})\b', lower)
-        if m_slash:
-            m_num = int(m_slash.group(1))
-            d_num = int(m_slash.group(2))
-            if 1 <= m_num <= 12 and 1 <= d_num <= 31:
-                year = msg_dt.year if msg_dt else now.year
-                game_date = datetime(year, m_num, d_num).date()
-
-    if not game_date:
-        for dow_name, dow_val in days_of_week.items():
-            if re.search(rf'\b{dow_name}\b', lower):
-                ref_dt = msg_dt if msg_dt else now
-                diff = (dow_val - ref_dt.weekday()) % 7
-                game_date = (ref_dt + timedelta(days=diff)).date()
-                break
-
-    if not game_date:
-        if msg_dt:
-            game_date = msg_dt.date()
-        else:
-            game_date = now.date()
-
-    end_hour = 13
-    end_minute = 0
-    m_range = re.search(r'-\s*(\d{1,4}(?::\d{2})?)\s*(a|p|am|pm)?\b', lower)
-    if m_range:
-        time_str = m_range.group(1)
-        meridiem = (m_range.group(2) or '').lower()
-        if ':' in time_str:
-            parts = time_str.split(':')
-            h, m = int(parts[0]), int(parts[1])
-        elif len(time_str) == 3:
-            h, m = int(time_str[0]), int(time_str[1:])
-        elif len(time_str) == 4:
-            h, m = int(time_str[:2]), int(time_str[2:])
-        else:
-            h, m = int(time_str), 0
-        if 'p' in meridiem and h < 12:
-            h += 12
-        elif not meridiem and h < 7:
-            h += 12
-        end_hour = h
-        end_minute = m
-    elif 'noon' in lower:
-        end_hour = 13
-        end_minute = 0
-    else:
-        m_start = re.search(r'(?:at|@)\s*(\d{1,4}(?::\d{2})?)\s*(a|p|am|pm)?\b', lower)
-        if m_start:
-            time_str = m_start.group(1)
-            meridiem = (m_start.group(2) or '').lower()
-            if ':' in time_str:
-                parts = time_str.split(':')
-                h, m = int(parts[0]), int(parts[1])
-            elif len(time_str) == 3:
-                h, m = int(time_str[0]), int(time_str[1:])
-            elif len(time_str) == 4:
-                h, m = int(time_str[:2]), int(time_str[2:])
-            else:
-                h, m = int(time_str), 0
-            if 'p' in meridiem and h < 12:
-                h += 12
-            elif not meridiem and h < 7:
-                h += 12
-            end_hour = h + 1
-            end_minute = m
-
     try:
-        game_end_dt = datetime(game_date.year, game_date.month, game_date.day,
-                               end_hour, end_minute, tzinfo=tz)
-        hours_since_end = (now - game_end_dt).total_seconds() / 3600.0
-        return hours_since_end > GAME_EXPIRY_HOURS
-    except Exception:
+        expires_at = datetime.fromisoformat(expires_str.replace('Z', '+00:00'))
+    except (TypeError, ValueError):
         return True
+    if now is None:
+        now = datetime.now().astimezone()
+    elif now.tzinfo is None:
+        now = now.astimezone()
+    return now > expires_at
 
 def render():
     os.makedirs(CACHE_DIR, exist_ok=True)

@@ -60,6 +60,29 @@ treated as ending at 1pm, so it was 2h past and still under the 3h cutoff.
   current time instead of the post time, so a "tomorrow" call never expired in the
   panel image. It now uses the post time; it also matches `tmrw` like the JS side.
 
+## 4. One source of truth for game dates and expiry
+
+**Problem:** The date/time rules were written twice: `lib/game_time.js` (CLI, tooltip)
+and `lib/render_image.py` (panel image). That is how the "tomorrow" bug got fixed in
+JS but stayed in Python, and the 2h cutoff had to be set in both files.
+
+**Fix:** The poller now computes `expires_at` (game end + `GAME_EXPIRY_HOURS`) with
+`getGameExpiresAt()` in `lib/game_time.js` and stores it on each call in
+`status.json`. Everything that shows game info compares the current time with it:
+- `lib/render_image.py`: `is_game_expired` is now a timestamp comparison. All Python
+  date parsing (~110 lines) and its copy of the cutoff are gone. A call without a
+  valid `expires_at` is treated as expired.
+- `bin/bball`, `lib/format.js`: `isGameExpired()` uses the stored `expires_at`, and
+  only computes it from the text when it's missing (e.g. test fixtures).
+- Replaced the unused `is_past` field with `expires_at`.
+
+Date, time and expiry rules now live only in `lib/game_time.js`.
+
+**Docs:** `ARCHITECTURE.md` now describes the current detection rules (§4.2), the full
+cache schema with `expires_at` (§4.3), and a new §4.5 on game dates and expiry; the
+diagram includes the renderer. `AGENTS.md` adds `npm test` and a rule that date
+rules stay in `lib/game_time.js`. `README.md` gets a short Development section.
+
 ## Tests
 
 | Area | Tests |
@@ -68,10 +91,11 @@ treated as ending at 1pm, so it was 2h past and still under the 3h cutoff.
 | `isCallRequest` | `test/cancelled.test.js` |
 | `isTrackedGameCall` (zero RSVPs, request, cancelled) | `test/select_call.test.js` |
 | JS 2h cutoff (1h59m vs 2h01m) | `test/game_time.test.js` |
-| Python renderer: 2h cutoff, "tomorrow"/"today" from post time | `test/test_render_image.py` (new) |
+| `getGameExpiresAt`, stored `expires_at` wins, invalid = expired | `test/game_time.test.js` |
+| Python renderer: compares with `expires_at` (time zones, missing/bad value) | `test/test_render_image.py` |
 
 `npm test` now runs both suites: `node --test && python3 -m unittest discover -s test`.
-Result: 24 JS + 4 Python tests passing.
+Result: 27 JS + 5 Python tests passing (after item 4).
 
 The new tests were checked against the old behavior: removing the zero-RSVP check
 fails the JS suite, and restoring the old "tomorrow from now" line fails
@@ -87,5 +111,6 @@ fails the JS suite, and restoring the old "tomorrow from now" line fails
 ## Status
 
 - Item 1: committed in `364c74c`.
-- Items 2 and 3, their tests and this recap: committed together in
+- Items 2 and 3, their tests and this recap: committed together in `01c05df`,
   "Ignore zero-RSVP and call-request messages; expire games 2h after end".
+- Item 4 and the doc updates: committed in "Compute game expiry once in JS; renderer reads expires_at".

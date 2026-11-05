@@ -12,9 +12,11 @@ The architecture follows a decoupled **producer-consumer** design:
    * [`bin/bball-poller`](bin/bball-poller) queries the Google Chat REST API and writes game calls/RSVP counts atomically to `~/.cache/bball-chat/status.json`.
    * Triggered autonomously via systemd user timer ([`systemd/bball-poller.timer`](systemd/bball-poller.timer)) every 90 seconds.
    * Invokes [`lib/render_image.py`](lib/render_image.py) to regenerate pre-rendered panel images.
+   * Stores `expires_at` (game end + 2h) on each call; all date/time rules live in [`lib/game_time.js`](lib/game_time.js).
 
 2. **Image Renderer**:
    * [`lib/render_image.py`](lib/render_image.py) uses Python and Pillow to render upright (`0°` rotation), high-contrast numbers into compact PNGs. This solves the vertical XFCE panel limitation where Pango text labels rotate by 90°.
+   * It decides whether a game is over by comparing now with the stored `expires_at`. It does not parse dates.
 
 3. **Panel Presenter (Consumer)**:
    * [`bin/bball-genmon`](bin/bball-genmon) is invoked by `xfce4-genmon-plugin` (every 15–180s).
@@ -50,6 +52,11 @@ python3 lib/render_image.py
 bin/bball-genmon
 bin/bball-genmon mtv
 bin/bball-genmon moffett
+```
+
+### Tests
+```bash
+npm test    # node --test (JS) && python3 -m unittest discover -s test (renderer)
 ```
 
 ### Systemd User Service & Timer
@@ -115,3 +122,5 @@ Inspect `/tmp/panel_crop.png` to verify alignment, font size, margins, and color
 2. **Never commit unprompted**: Do not execute `git commit` unless explicitly instructed by the user. When asked to commit, provide a detailed commit message with summary and verification.
 3. **Preserve low presenter latency**: Keep [`bin/bball-genmon`](bin/bball-genmon) non-blocking and under 10ms execution time. All network access belongs in [`bin/bball-poller`](bin/bball-poller).
 4. **Preserve user config**: Do not wipe or overwrite user settings in `~/.config/bball-chat/config.json` during testing.
+5. **One home for date rules**: Game date, time and expiry rules belong only in [`lib/game_time.js`](lib/game_time.js). Do not copy them into Python; the renderer reads `expires_at` from `status.json`. See [ARCHITECTURE.md §4.5](ARCHITECTURE.md).
+6. **Run `npm test`** after changes; it runs both the JS and Python suites.

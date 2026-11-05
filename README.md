@@ -89,6 +89,16 @@ Configuration is stored at `~/.config/bball-chat/config.json`:
 
 ---
 
+## Development
+
+```bash
+npm test    # JS tests (node --test) and Python renderer tests (unittest)
+```
+
+Game date, time and expiry rules live only in `lib/game_time.js`; see [ARCHITECTURE.md §4.5](ARCHITECTURE.md#45-game-dates--expiry-single-source-of-truth).
+
+---
+
 ## Architecture & Background Service
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for full system architecture details and Google Chat API integration.

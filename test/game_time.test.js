@@ -1,6 +1,6 @@
 import { test, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isGameExpired, getGameEndDate, isGameToday } from '../lib/game_time.js';
+import { isGameExpired, getGameEndDate, getGameExpiresAt, isGameToday } from '../lib/game_time.js';
 import { formatGenmonXml } from '../lib/format.js';
 
 describe('Game Time & Expiration (> 2 hours past)', () => {
@@ -247,5 +247,27 @@ describe('isGameToday', () => {
   });
   it('is not today on the day it was posted', () => {
     assert.equal(isGameToday(call, new Date(2026, 10, 4, 20, 0)), false);
+  });
+});
+
+describe('expires_at (shared expiry timestamp)', () => {
+  const call = {
+    text: 'GAME CALL Tomorrow Thursday at Garfield at noon',
+    create_time: new Date(2026, 10, 4, 18, 0).toISOString() // posted Wed Nov 4
+  };
+
+  it('is 2 hours after the game end (noon game ends 1pm -> 3pm)', () => {
+    assert.equal(getGameExpiresAt(call).getTime(), new Date(2026, 10, 5, 15, 0).getTime());
+  });
+
+  it('isGameExpired uses the stored expires_at over the message text', () => {
+    // Text alone would say expired on Nov 6; a stored expires_at wins
+    const stored = { ...call, expires_at: new Date(2026, 10, 7, 0, 0).toISOString() };
+    assert.equal(isGameExpired(stored, new Date(2026, 10, 6, 12, 0)), false);
+    assert.equal(isGameExpired(call, new Date(2026, 10, 6, 12, 0)), true);
+  });
+
+  it('isGameExpired treats an invalid expires_at as expired', () => {
+    assert.equal(isGameExpired({ expires_at: 'garbage' }, new Date(2026, 10, 5, 12, 0)), true);
   });
 });
