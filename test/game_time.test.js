@@ -45,6 +45,16 @@ describe('Game Time & Expiration (> 2 hours past)', () => {
     const endNoon = getGameEndDate(callNoon);
     assert.equal(endNoon.getHours(), 13);
     assert.equal(endNoon.getMinutes(), 0);
+
+    // Bare start times only: latest start (5pm) + 1h
+    const callBare = {
+      text: "Call for basketball Monday Nov 9 at MPD237 (which Panos says has best lighting among SVL options).  Use 5️⃣ to say you'd be in for 5pm start, 4️⃣ for 4pm start (which makes lighting less relevant), and 🏀 if in for either.",
+      create_time: '2026-11-09T03:48:27Z'
+    };
+    const endBare = getGameEndDate(callBare);
+    assert.equal(endBare.getDate(), 9);
+    assert.equal(endBare.getHours(), 18);
+    assert.equal(endBare.getMinutes(), 0);
   });
 
   it('marks a game as active while ongoing and within 2 hours after game end', () => {
