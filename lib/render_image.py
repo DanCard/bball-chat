@@ -22,6 +22,7 @@ FONT_PATH = DEFAULT_FONT_PATH
 # Distinguishable colors
 COLOR_MTV = "#00D2FF"      # Vibrant bright cyan/blue
 COLOR_MOFFETT = "#FFA500"  # Warm amber/orange
+COLOR_AUTH_ERROR = "#FF3030"  # Red "L": Google login is broken
 
 def get_font_path(config=None):
     if config:
@@ -236,6 +237,11 @@ def is_game_expired(call, now=None):
         now = now.astimezone()
     return now > expires_at
 
+def has_auth_error(status):
+    """True if the poller could not log in to Google for any space."""
+    spaces = (status or {}).get("spaces") or {}
+    return any(isinstance(s, dict) and s.get("auth_error") for s in spaces.values())
+
 def render():
     os.makedirs(CACHE_DIR, exist_ok=True)
     
@@ -266,6 +272,16 @@ def render():
     moffett_past = is_game_expired(moffett_call)
 
     fpath = get_font_path(config)
+
+    # Login broken: counts are unknown, so show a red "L" everywhere instead
+    # of "-", which would look like a quiet day with no games.
+    if has_auth_error(status):
+        img_login = draw_single_num("L", COLOR_AUTH_ERROR, font_path=fpath)
+        for out in (OUTPUT_MAIN, OUTPUT_MTV, OUTPUT_MOFFETT):
+            save_atomic(img_login, out)
+        if "--no-refresh" not in sys.argv:
+            refresh_panel()
+        return
 
     # Ball icon for idle/past games
     img_ball = make_basketball(32, 34)

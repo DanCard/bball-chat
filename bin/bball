@@ -44,6 +44,11 @@ function showStatus() {
     return;
   }
 
+  if (Object.values(status.spaces).some(s => s && s.auth_error)) {
+    console.log('⚠ GOOGLE LOGIN ERROR: the poller cannot read Google Chat; counts below are not live.');
+    console.log('  Log in again via the google-workspace MCP in Claude Code, then run `bball poll`.\n');
+  }
+
   const now = new Date();
   const rawMtv = status.spaces.mtv?.active_call;
   const rawMp = status.spaces.moffett?.active_call;

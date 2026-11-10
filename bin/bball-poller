@@ -5,6 +5,7 @@ dns.setDefaultResultOrder('ipv4first');
 
 import { getConfig, saveStatus } from '../lib/config.js';
 import { getActiveGameCall } from '../lib/chat.js';
+import { isAuthError } from '../lib/auth.js';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,6 +40,7 @@ async function pollOnce() {
         short_name: s.short_name,
         url: s.url,
         error: err.message,
+        auth_error: isAuthError(err),
         active_call: null
       };
     }

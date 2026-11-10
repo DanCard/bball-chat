@@ -49,5 +49,23 @@ class IsGameExpiredTest(unittest.TestCase):
         self.assertFalse(hasattr(render_image, 'GAME_EXPIRY_HOURS'))
 
 
+class AuthErrorTest(unittest.TestCase):
+    def test_no_error(self):
+        status = {'spaces': {'mtv': {'active_call': None}, 'moffett': {}}}
+        self.assertFalse(render_image.has_auth_error(status))
+
+    def test_any_space_with_auth_error(self):
+        status = {'spaces': {'mtv': {'auth_error': True}, 'moffett': {}}}
+        self.assertTrue(render_image.has_auth_error(status))
+
+    def test_non_auth_error_is_ignored(self):
+        status = {'spaces': {'mtv': {'error': 'ENOTFOUND', 'auth_error': False}}}
+        self.assertFalse(render_image.has_auth_error(status))
+
+    def test_empty_status(self):
+        self.assertFalse(render_image.has_auth_error({}))
+        self.assertFalse(render_image.has_auth_error(None))
+
+
 if __name__ == '__main__':
     unittest.main()
